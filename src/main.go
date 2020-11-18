@@ -15,27 +15,30 @@ import (
 	"regexp"
 	"strings"
 
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/spf13/cobra"
 )
 
 const (
-	perUserDotFile                = ".easelrc"
+	appName                       = "Easel"
+	cmdName                       = "easel"
+	perUserDotFile                = "." + cmdName + "rc"
 	urlPrefix                     = "/api/v1"
 	coursesPath                   = "/courses"
-	coursePath                    = coursesPath + "/{}"
+	coursePath                    = coursesPath + "/%d"
 	quizzesPath                   = coursePath + "/quizzes"
-	quizPath                      = quizzesPath + "/{}"
+	quizPath                      = quizzesPath + "/%d"
 	quizQuestionsPath             = quizPath + "/questions"
 	quizSubmissionsPath           = quizPath + "/submissions"
-	quizSubmissionPath            = quizSubmissionsPath + "/{}"
-	quizSubmissionQuestionsPath   = "/quiz_submissions/{}/questions"
+	quizSubmissionPath            = quizSubmissionsPath + "/%d"
+	quizSubmissionQuestionsPath   = "/quiz_submissions/%d/questions"
 	quizReportsPath               = quizPath + "/reports"
-	quizReportPath                = quizReportsPath + "/{}"
+	quizReportPath                = quizReportsPath + "/%d"
 	assignmentsPath               = coursePath + "/assignments"
-	assignmentPath                = assignmentsPath + "/{}"
+	assignmentPath                = assignmentsPath + "/%d"
 	assignmentSubmissionsPath     = assignmentPath + "/submissions"
-	gradeAssignmentSubmissionPath = assignmentSubmissionsPath + "/{}" // user_id
-	progressPath                  = "/progress/{}"
+	gradeAssignmentSubmissionPath = assignmentSubmissionsPath + "/%d" // user_id
+	progressPath                  = "/progress/%d"
 )
 
 var Config struct {
@@ -49,7 +52,7 @@ func main() {
 	log.SetFlags(log.Ltime)
 
 	cmd := &cobra.Command{
-		Use:   "easel",
+		Use:   cmdName,
 		Short: "Canvas shell management tool",
 	}
 	cmd.PersistentFlags().BoolVarP(&Config.apiReport, "api", "", false, "report all API requests")
@@ -66,6 +69,14 @@ func main() {
 		Run: CommandLogin,
 	}
 	cmd.AddCommand(cmdLogin)
+
+	cmdInit := &cobra.Command{
+		Use:   "init",
+		Short: "Initialize the db and point it to the given course",
+		Long:  "TODO instructions",
+		Run:   CommandInit,
+	}
+	cmd.AddCommand(cmdInit)
 
 	cmdPull := &cobra.Command{
 		Use:   "pull [component] [component_id]",
@@ -92,15 +103,17 @@ type LoginSession struct {
 
 func CommandLogin(cmd *cobra.Command, args []string) {
 	if len(args) != 2 {
-		fmt.Printf("To log in, click on an assignment in Canvas and follow the\n"+
-			"instructions given. You should run a command of the form:\n\n"+
-			"%s login <hostname> <token>\n\n"+
-			"where <hostname> and <token> are given in the instructions.\n\n"+
-			"You should normally only need to do this once per semester.\n\n", os.Args[0])
-
 		log.Fatalf("Usage: %s login <hostname> <token>", os.Args[0])
 	}
 	hostname, token := args[0], args[1]
+
+	protocol := "https://"
+	if strings.HasPrefix(hostname, protocol) {
+		hostname = hostname[len(protocol):]
+	}
+	if strings.HasSuffix(hostname, "/") {
+		hostname = hostname[:len(hostname)-1]
+	}
 
 	// set up config
 	Config.Host = hostname
@@ -109,7 +122,27 @@ func CommandLogin(cmd *cobra.Command, args []string) {
 	// save config for later use
 	mustWriteConfig()
 
-	log.Printf("login successful")
+	log.Println("login successful")
+}
+
+func CommandInit(cmd *cobra.Command, args []string) {
+	mustLoadConfig(cmd)
+	db := mustCreateDb()
+	defer db.Close()
+	courseId, err := getCourseIdFromUrl(args[0])
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	course, err := createCourse(db, courseId)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	err = course.dump()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 }
 
 func mustGetObject(path string, params url.Values, download interface{}) {
