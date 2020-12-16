@@ -72,27 +72,38 @@ func main() {
 
 	cmdInit := &cobra.Command{
 		Use:   "init",
-		Short: "Initialize the db and point it to the given course",
+		Short: "Initialize the db",
 		Long:  "TODO instructions",
 		Run:   CommandInit,
 	}
 	cmd.AddCommand(cmdInit)
 
-	cmdPull := &cobra.Command{
-		Use:   "pull [component] [component_id]",
-		Short: "pull a single component or all of that type if blank",
+	cmdCourse := &cobra.Command{
+		Use:   "course <course_canvas_url|'list'>",
+		Short: "Point db to the given course",
 		Long:  "TODO instructions",
-		Run:   CommandPull,
+		Run:   CommandCourse,
 	}
-	cmd.AddCommand(cmdPull)
+	cmd.AddCommand(cmdCourse)
 
-	cmdPush := &cobra.Command{
-		Use:   "push [component] [component_id]",
-		Short: "push a single component or all of that type if blank",
-		Long:  "TODO instructions",
-		Run:   CommandPush,
-	}
-	cmd.AddCommand(cmdPush)
+	/*
+
+		cmdPull := &cobra.Command{
+			Use:   "pull [component] [component_id]",
+			Short: "pull a single component or all of that type if blank",
+			Long:  "TODO instructions",
+			Run:   CommandPull,
+		}
+		cmd.AddCommand(cmdPull)
+
+			cmdPush := &cobra.Command{
+				Use:   "push [component] [component_id]",
+				Short: "push a single component or all of that type if blank",
+				Long:  "TODO instructions",
+				Run:   CommandPush,
+			}
+			cmd.AddCommand(cmdPush)
+	*/
 
 	cmd.Execute()
 }
@@ -127,8 +138,14 @@ func CommandLogin(cmd *cobra.Command, args []string) {
 
 func CommandInit(cmd *cobra.Command, args []string) {
 	mustLoadConfig(cmd)
-	db := mustCreateDb()
+	mustCreateDb()
+}
+
+func CommandCourse(cmd *cobra.Command, args []string) {
+	mustLoadConfig(cmd)
+	db := findDb()
 	defer db.Close()
+
 	courseId, err := getCourseIdFromUrl(args[0])
 	if err != nil {
 		log.Fatal(err.Error())

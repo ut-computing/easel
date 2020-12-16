@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/russross/meddler"
-	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -77,9 +76,5 @@ func createCourse(db *sql.DB, courseId int) (*Course, error) {
 }
 
 func (course *Course) dump() error {
-	metadata, err := yaml.Marshal(course)
-	if err != nil {
-		return err
-	}
-	return writeFile("course.md", string(metadata), course.Syllabus)
+	return writeFile("syllabus.html", "", course.Syllabus)
 }

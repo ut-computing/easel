@@ -14,11 +14,14 @@ const (
 )
 
 func writeFile(filename, metadata, html string) error {
-	text := fmt.Sprintf("```\n%s```\n%s", metadata, html)
+	text := html
+	if metadata != "" {
+		text = fmt.Sprintf("```\n%s```\n", metadata)
+	}
 	return ioutil.WriteFile(filename, []byte(text), 0644)
 }
 
-func mustCreateDb() *sql.DB {
+func mustCreateDb() {
 	directory, err := filepath.Abs(".")
 	if err != nil {
 		log.Fatalf("error finding directory: %v", err)
@@ -33,12 +36,13 @@ func mustCreateDb() *sql.DB {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer db.Close()
 
+	// TODO: create all tables (execute .sql file)
 	mustCreateCoursesTable(db)
-	return db
 }
 
-func findDb(startDir string) *sql.DB {
+func findDb() *sql.DB {
 	directory, err := filepath.Abs(".")
 	if err != nil {
 		log.Fatalf("error finding directory: %v", err)
