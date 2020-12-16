@@ -58,6 +58,7 @@ func main() {
 	cmd.PersistentFlags().BoolVarP(&Config.apiReport, "api", "", false, "report all API requests")
 	cmd.PersistentFlags().BoolVarP(&Config.apiDump, "api-dump", "", false, "dump API request and response data")
 
+	// Login
 	cmdLogin := &cobra.Command{
 		Use:   "login <hostname> <token>",
 		Short: "login to Canvas",
@@ -70,6 +71,7 @@ func main() {
 	}
 	cmd.AddCommand(cmdLogin)
 
+	// Init
 	cmdInit := &cobra.Command{
 		Use:   "init",
 		Short: "Initialize the db",
@@ -78,12 +80,33 @@ func main() {
 	}
 	cmd.AddCommand(cmdInit)
 
+	// Course
 	cmdCourse := &cobra.Command{
-		Use:   "course <course_canvas_url|'list'>",
+		Use:   "course <command>",
+		Short: "Manage courses",
+		Long:  "TODO instructions",
+	}
+	cmdCourseAdd := &cobra.Command{
+		Use:   "add <course_canvas_url>",
 		Short: "Point db to the given course",
 		Long:  "TODO instructions",
-		Run:   CommandCourse,
+		Run:   CommandCourseAdd,
 	}
+	cmdCourse.AddCommand(cmdCourseAdd)
+	cmdCourseList := &cobra.Command{
+		Use:   "list",
+		Short: "List current courses",
+		Long:  "TODO instructions",
+		Run:   CommandCourseList,
+	}
+	cmdCourse.AddCommand(cmdCourseList)
+	cmdCourseRemove := &cobra.Command{
+		Use:   "remove <section_number|course_canvas_id>",
+		Short: "Remove course",
+		Long:  "TODO instructions",
+		Run:   CommandCourseRemove,
+	}
+	cmdCourse.AddCommand(cmdCourseRemove)
 	cmd.AddCommand(cmdCourse)
 
 	/*
@@ -141,21 +164,10 @@ func CommandInit(cmd *cobra.Command, args []string) {
 	mustCreateDb()
 }
 
-func CommandCourse(cmd *cobra.Command, args []string) {
+func CommandCourseAdd(cmd *cobra.Command, args []string) {
 	mustLoadConfig(cmd)
 	db := findDb()
 	defer db.Close()
-
-	if args[0] == "list" {
-		courses, err := findCourses(db)
-		if err != nil {
-			log.Fatal("Failed to find courses")
-		}
-		for _, course := range courses {
-			fmt.Println(course)
-		}
-		return
-	}
 
 	courseId, err := getCourseIdFromUrl(args[0])
 	if err != nil {
@@ -167,10 +179,50 @@ func CommandCourse(cmd *cobra.Command, args []string) {
 		log.Fatal(err.Error())
 	}
 
-	err = course.dump()
+	err = course.Dump()
 	if err != nil {
 		log.Fatal(err.Error())
 	}
+}
+
+func CommandCourseList(cmd *cobra.Command, args []string) {
+	db := findDb()
+	defer db.Close()
+
+	courses, err := findCourses(db)
+	if err != nil {
+		log.Fatal("Failed to find courses")
+	}
+	for _, course := range courses {
+		fmt.Println(course)
+	}
+}
+
+func CommandCourseRemove(cmd *cobra.Command, args []string) {
+	if len(args) != 1 {
+		log.Fatalf("Usage: %s remove <course_number>", os.Args[0])
+	}
+
+	db := findDb()
+	defer db.Close()
+
+	courses, err := matchCourse(db, args[0])
+	if len(courses) == 0 || err != nil {
+		log.Fatalf("Could not find course for %s", args[0])
+	} else if len(courses) > 1 {
+		for _, course := range courses {
+			fmt.Println(course)
+		}
+		log.Printf("The search found more than one course")
+		log.Printf("   pick the correct course id from the list")
+		log.Fatalf("   and run '%s course remove <id>'", os.Args[0])
+	}
+
+	err = courses[0].Remove(db)
+	if err != nil {
+		log.Fatalf("Failed to remove course: %v", err)
+	}
+	fmt.Println("Removed course", courses[0].Name)
 }
 
 func mustGetObject(path string, params url.Values, download interface{}) {

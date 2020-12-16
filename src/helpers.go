@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -75,4 +76,17 @@ func findDb() *sql.DB {
 	}
 
 	return db
+}
+
+func addWhereLike(where string, args []interface{}, label string, value string) (string, []interface{}) {
+	if where == "" {
+		where = " WHERE"
+	} else {
+		where += " AND"
+	}
+	args = append(args, "%"+strings.ToLower(value)+"%")
+
+	// sqlite is set to use case insensitive LIKEs
+	where += fmt.Sprintf(" %s LIKE ?", label)
+	return where, args
 }
