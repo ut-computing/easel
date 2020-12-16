@@ -146,6 +146,17 @@ func CommandCourse(cmd *cobra.Command, args []string) {
 	db := findDb()
 	defer db.Close()
 
+	if args[0] == "list" {
+		courses, err := findCourses(db)
+		if err != nil {
+			log.Fatal("Failed to find courses")
+		}
+		for _, course := range courses {
+			fmt.Println(course)
+		}
+		return
+	}
+
 	courseId, err := getCourseIdFromUrl(args[0])
 	if err != nil {
 		log.Fatal(err.Error())

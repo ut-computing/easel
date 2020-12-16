@@ -61,6 +61,12 @@ func findCourse(db *sql.DB, courseId int) (*Course, error) {
 	return course, err
 }
 
+func findCourses(db *sql.DB) ([]*Course, error) {
+	var courses []*Course
+	err := meddler.QueryAll(db, &courses, "select * from "+coursesTable)
+	return courses, err
+}
+
 func pullCourse(courseId int) *Course {
 	course := new(Course)
 	values := url.Values{}
@@ -73,6 +79,16 @@ func createCourse(db *sql.DB, courseId int) (*Course, error) {
 	course := pullCourse(courseId)
 	err := meddler.Insert(db, coursesTable, course)
 	return course, err
+}
+
+func (course *Course) GetCourseNumber() string {
+	values := strings.Split(course.Name, " ")
+	return values[0]
+}
+
+func (course *Course) String() string {
+	// TODO: grind student tabular output?
+	return fmt.Sprintf("%d\t%s\t%s\t%s", course.CanvasId, course.Name, course.Code, course.WorkflowState)
 }
 
 func (course *Course) dump() error {
