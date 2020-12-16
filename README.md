@@ -41,12 +41,11 @@ List all Canvas courses that are tracked in the database.
 
 ## TODO
 
-- Still need to think about multiple courses (i.e., sections).
+- multiple courses (i.e., sections).
     - implicit iteration
-        - push: pushes to all courses, unless specified
+        - push: pushes to all courses, unless specified (e.g., -c 02)
         - pull: pulls from all courses, checks for and reports any differences
-    - A single file should potentially describe multiple courses, but then we
-      can't put the course id in the file
+            - need to add a prompt for overwrite, manually merge, or abort
 - Enforce directories? (e.g., pages, assignments, modules)
 - Canvas uses html for pages and assignment descriptions, we should use markdown
   and convert it. For now I'm just dumping the html though.

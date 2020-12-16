@@ -43,15 +43,6 @@ func mustCreateCoursesTable(db *sql.DB) {
 	statement.Exec()
 }
 
-func createCourse(db *sql.DB, courseId int) (*Course, error) {
-	if c, _ := findCourse(db, courseId); c.Id > 0 {
-		return c, errors.New("Course exists")
-	}
-	course := pullCourse(courseId)
-	err := meddler.Insert(db, coursesTable, course)
-	return course, err
-}
-
 func findCourse(db *sql.DB, courseId int) (*Course, error) {
 	course := new(Course)
 	err := meddler.QueryRow(db, course, "select * from "+coursesTable+" where canvas_id = ?", courseId)
@@ -99,12 +90,27 @@ func matchCourse(db *sql.DB, search string) ([]*Course, error) {
 	return courses, err
 }
 
-func pullCourse(courseId int) *Course {
+func pullCourse(db *sql.DB, courseId int) (*Course, error) {
 	course := new(Course)
 	values := url.Values{}
 	values.Add("include[]", "syllabus_body")
-	mustGetObject(fmt.Sprintf(coursePath, courseId), values, course)
-	return course
+	if !getObject(fmt.Sprintf(coursePath, courseId), values, course) {
+		return course, errors.New("Failed to pull course from Canvas")
+	}
+
+	// TODO: prompt for overwrite, manually merge, abort
+	err := meddler.Insert(db, coursesTable, course)
+	if err != nil {
+		return course, err
+	}
+
+	err = course.Dump()
+	return course, err
+}
+
+func pullCourses(db *sql.DB) []*Course {
+	courses := make([]*Course, 0)
+	return courses
 }
 
 func (course *Course) GetCourseNumber() string {
