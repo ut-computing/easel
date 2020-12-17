@@ -108,9 +108,20 @@ func pullCourse(db *sql.DB, courseId int) (*Course, error) {
 	return course, err
 }
 
-func pullCourses(db *sql.DB) []*Course {
-	courses := make([]*Course, 0)
-	return courses
+func pullCourses(db *sql.DB) ([]*Course, error) {
+	courses, err := findCourses(db)
+	if err != nil {
+		return courses, err
+	}
+
+	for i := range courses {
+		courses[i], err = pullCourse(db, courses[i].Id)
+		if err != nil {
+			return courses, err
+		}
+	}
+
+	return courses, nil
 }
 
 func (course *Course) GetCourseNumber() string {

@@ -17,6 +17,8 @@ const (
 	urlPrefix                     = "/api/v1"
 	coursesPath                   = "/courses"
 	coursePath                    = coursesPath + "/%d"
+	pagesPath                     = coursePath + "/pages"
+	pagePath                      = pagesPath + "/%s"
 	quizzesPath                   = coursePath + "/quizzes"
 	quizPath                      = quizzesPath + "/%d"
 	quizQuestionsPath             = quizPath + "/questions"
@@ -100,23 +102,24 @@ func main() {
 	cmdCourse.AddCommand(cmdCourseRemove)
 	cmd.AddCommand(cmdCourse)
 
+	// Pull
+	cmdPull := &cobra.Command{
+		Use:   "pull [component_type] [component_id]",
+		Short: "pull a single component or all of that type if blank",
+		Long:  "TODO instructions",
+		Run:   CommandPull,
+	}
+	cmd.AddCommand(cmdPull)
+
 	/*
-
-		cmdPull := &cobra.Command{
-			Use:   "pull [component] [component_id]",
-			Short: "pull a single component or all of that type if blank",
+		// Push
+		cmdPush := &cobra.Command{
+			Use:   "push [component] [component_id]",
+			Short: "push a single component or all of that type if blank",
 			Long:  "TODO instructions",
-			Run:   CommandPull,
+			Run:   CommandPush,
 		}
-		cmd.AddCommand(cmdPull)
-
-			cmdPush := &cobra.Command{
-				Use:   "push [component] [component_id]",
-				Short: "push a single component or all of that type if blank",
-				Long:  "TODO instructions",
-				Run:   CommandPush,
-			}
-			cmd.AddCommand(cmdPush)
+		cmd.AddCommand(cmdPush)
 	*/
 
 	cmd.Execute()
@@ -215,30 +218,37 @@ func CommandCourseRemove(cmd *cobra.Command, args []string) {
 	fmt.Println("Removed course", courses[0].Name)
 }
 
-/*
 func CommandPull(cmd *cobra.Command, args []string) {
 	mustLoadConfig()
+	db := findDb()
+	defer db.Close()
+
 	switch len(args) {
 	case 0:
 		// pull all components of all types
-
-		pullPages()
+		pullCourses(db)
+		pullAllPages(db)
 	case 1:
 		// pull all components of single type
 		componentType := args[0]
 		switch componentType {
+		case "courses":
+			pullCourses(db)
 		case "pages":
-			pullPages()
+			pullAllPages(db)
 		default:
 			log.Fatalf("Invalid component type: %s", componentType)
 		}
 	case 2:
 		// pull single item of single type
 		componentType := args[0]
-		componentFilePath := args[1]
+		componentFilepath := args[1]
 		switch componentType {
-		case "pages":
-			pullPage(componentFilePath)
+		case "courses":
+			pullCourses(db) // TODO: find a reason why we'd only pull a single course
+		case "pages", "page":
+			pageUrl := getPageUrlFromFilepath(componentFilepath)
+			pullPage(db, pageUrl)
 		default:
 			log.Fatalf("Invalid component type: %s", componentType)
 		}
@@ -246,4 +256,3 @@ func CommandPull(cmd *cobra.Command, args []string) {
 		log.Fatal("Too many arguments")
 	}
 }
-*/

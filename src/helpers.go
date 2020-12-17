@@ -15,6 +15,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/deiu/linkparser"
 )
 
 const (
@@ -24,7 +26,7 @@ const (
 func writeFile(filename, metadata, html string) error {
 	text := html
 	if metadata != "" {
-		text = fmt.Sprintf("```\n%s```\n", metadata)
+		text = fmt.Sprintf("```\n%s```\n", metadata) + text
 	}
 	return ioutil.WriteFile(filename, []byte(text), 0644)
 }
@@ -114,17 +116,10 @@ func mustPutObject(path string, params url.Values, upload interface{}, download 
 	doRequest(path, params, "PUT", upload, download, false)
 }
 
-func doRequest(path string, params url.Values, method string, upload interface{}, download interface{}, notfoundokay bool) bool {
-	if !strings.HasPrefix(path, "/") {
-		log.Panicf("doRequest path must start with /")
-	}
-	if method != "GET" && method != "POST" && method != "PUT" && method != "DELETE" {
-		log.Panicf("doRequest only recognizes GET, POST, PUT, and DELETE methods")
-	}
-	url := fmt.Sprintf("https://%s%s%s", Config.Host, urlPrefix, path)
-	req, err := http.NewRequest(method, url, nil)
+func prepareRequest(reqUrl string, params url.Values, method string, upload interface{}, download interface{}) (*http.Request, error) {
+	req, err := http.NewRequest(method, reqUrl, nil)
 	if err != nil {
-		log.Fatalf("error creating http request: %v\n", err)
+		return req, err
 	}
 
 	// add any parameters
@@ -169,25 +164,84 @@ func doRequest(path string, params url.Values, method string, upload interface{}
 			log.Printf("Request data: %s", uncompressed)
 		}
 	}
+	return req, nil
+}
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Fatalf("error connecting to %s: %v", Config.Host, err)
+func doRequest(path string, params url.Values, method string, upload interface{}, download interface{}, notfoundokay bool) bool {
+	if !strings.HasPrefix(path, "/") {
+		log.Panicf("doRequest path must start with /")
 	}
-	defer resp.Body.Close()
-	if notfoundokay && resp.StatusCode == http.StatusNotFound {
+	if method != "GET" && method != "POST" && method != "PUT" && method != "DELETE" {
+		log.Panicf("doRequest only recognizes GET, POST, PUT, and DELETE methods")
+	}
+
+	reqUrl := fmt.Sprintf("https://%s%s%s", Config.Host, urlPrefix, path)
+	req, err := prepareRequest(reqUrl, params, method, upload, download)
+	if err != nil {
+		log.Fatalf("error creating http request: %v\n", err)
+	}
+
+	paginated := false // assume not paginated
+	allResults := make([]map[string]interface{}, 0)
+	for {
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			log.Fatalf("error connecting to %s: %v", Config.Host, err)
+		}
+		defer resp.Body.Close()
+		if notfoundokay && resp.StatusCode == http.StatusNotFound {
+			return false
+		}
+		if resp.StatusCode != http.StatusOK {
+			log.Printf("unexpected status from %s: %s", reqUrl, resp.Status)
+			dumpBody(resp)
+			log.Fatalf("giving up")
+		}
+		gzipped := resp.Header.Get("Content-Encoding") == "gzip"
+
+		// grab next page url if paginated
+		links := lh.ParseHeader(resp.Header.Get("Link"))
+		next, ok := links["next"]["href"]
+		if !ok {
+			if !paginated {
+				// if non-paginated response, we're done
+				return parseResponse(resp.Body, gzipped, download)
+			} else {
+				// no more paginated results, grab last results and done
+				partResults := make([]map[string]interface{}, 0)
+				if parseResponse(resp.Body, gzipped, &partResults) {
+					allResults = append(allResults, partResults...)
+				}
+				break
+			}
+		}
+
+		// set up request for next page
+		paginated = true // at this point, we're paginated, set flag on the first time
+		// grab partial results
+		partResults := make([]map[string]interface{}, 0)
+		if parseResponse(resp.Body, gzipped, &partResults) {
+			allResults = append(allResults, partResults...)
+		}
+		// prepare for next request
+		req, err = prepareRequest(next, url.Values{}, method, upload, download)
+		if err != nil {
+			log.Fatalf("error creating http request: %v\n", err)
+		}
+	}
+
+	// re-encode all results
+	allJson, err := json.Marshal(allResults)
+	if err != nil {
 		return false
 	}
-	if resp.StatusCode != http.StatusOK {
-		log.Printf("unexpected status from %s: %s", url, resp.Status)
-		dumpBody(resp)
-		log.Fatalf("giving up")
-	}
+	return json.Unmarshal(allJson, download) == nil
+}
 
+func parseResponse(body io.ReadCloser, gzipped bool, download interface{}) bool {
 	// parse the result if any
 	if download != nil {
-		body := resp.Body
-		if resp.Header.Get("Content-Encoding") == "gzip" {
+		if gzipped {
 			gz, err := gzip.NewReader(body)
 			if err != nil {
 				log.Fatalf("failed to decompress gzip result: %v", err)
