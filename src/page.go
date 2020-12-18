@@ -35,25 +35,6 @@ type Page struct {
 	FrontPage bool `json:"front_page" yaml:"front_page" meddler:"front_page" `
 }
 
-func mustCreatePagesTable(db *sql.DB) {
-	command := `CREATE TABLE pages (
-		"id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,
-		"url" text NOT NULL,
-		"title" integer NOT NULL,
-		"created_at" TEXT NOT NULL,
-		"updated_at" TEXT NOT NULL,
-		"body" TEXT NOT NULL
-		"published" integer NOT NULL,
-		"front_page" integer NOT NULL
-	  );`
-
-	statement, err := db.Prepare(command)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-	statement.Exec()
-}
-
 func getAllPages(db *sql.DB) []*Page {
 	pages := make([]*Page, 0)
 	courses, _ := findCourses(db)

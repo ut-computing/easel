@@ -173,10 +173,12 @@ func CommandCourseAdd(cmd *cobra.Command, args []string) {
 		log.Fatalf("Course exists")
 	}
 
-	_, err = pullCourse(db, courseId)
+	course, err := pullCourse(db, courseId)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
+
+	course.Save(db)
 }
 
 func CommandCourseList(cmd *cobra.Command, args []string) {

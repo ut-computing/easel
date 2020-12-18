@@ -100,12 +100,6 @@ func pullCourse(db *sql.DB, courseId int) (*Course, error) {
 	}
 
 	// TODO: prompt for overwrite, manually merge/update, abort
-	/*
-		err := meddler.Insert(db, coursesTable, course)
-		if err != nil {
-			return course, err
-		}
-	*/
 
 	if _, err := os.Stat("syllabus.html"); os.IsNotExist(err) {
 		err = course.Dump()
@@ -163,6 +157,10 @@ func (course *Course) Push() error {
 func (course *Course) Remove(db *sql.DB) error {
 	_, err := db.Exec("DELETE from "+coursesTable+" WHERE id = ?", course.Id)
 	return err
+}
+
+func (course *Course) Save(db *sql.DB) error {
+	return meddler.Insert(db, coursesTable, course)
 }
 
 func (course *Course) String() string {

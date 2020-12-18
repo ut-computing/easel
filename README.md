@@ -110,6 +110,8 @@ for the same components as previously listed.
 - represent dates as time.Time
     - API requires strings (e.g., "2013-01-23T23:59:00-07:00")
 - add a progress bar for pushing and pulling
+- When pushing, update database with result (e.g., when pushing to a new course,
+  the canvas id will be different)
 
 ### Thoughts
 
