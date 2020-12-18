@@ -32,6 +32,10 @@ func writeFile(filename, metadata, html string) error {
 	return ioutil.WriteFile(filename, []byte(text), 0644)
 }
 
+func writeYamlFile(filename, data string) error {
+	return ioutil.WriteFile(filename, []byte(data), 0644)
+}
+
 func mustCreateDb() {
 	directory, err := filepath.Abs(".")
 	if err != nil {
@@ -346,4 +350,12 @@ func readFile(filename string, target interface{}) (string, error) {
 	fileParts := strings.Split(string(dat), "```")
 	err = yaml.Unmarshal([]byte(fileParts[1]), target)
 	return fileParts[2], err
+}
+
+func readYamlFile(filename string, target interface{}) error {
+	dat, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+	return yaml.Unmarshal([]byte(dat), target)
 }

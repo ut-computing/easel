@@ -17,6 +17,8 @@ const (
 	urlPrefix                     = "/api/v1"
 	coursesPath                   = "/courses"
 	coursePath                    = coursesPath + "/%d"
+	modulesPath                   = coursePath + "/modules"
+	modulePath                    = modulesPath + "/%d"
 	pagesPath                     = coursePath + "/pages"
 	pagePath                      = pagesPath + "/%s"
 	quizzesPath                   = coursePath + "/quizzes"
@@ -233,6 +235,8 @@ func CommandPull(cmd *cobra.Command, args []string) {
 		switch componentType {
 		case "courses":
 			pullCourses(db)
+		case "modules":
+			pullModules(db)
 		case "pages":
 			pullAllPages(db)
 		default:
@@ -249,6 +253,12 @@ func CommandPull(cmd *cobra.Command, args []string) {
 				log.Fatalf("Failed to find a single course for %s. %v\n", componentFilepath, err)
 			}
 			pullCourse(db, courses[0].CanvasId)
+		case "modules", "module":
+			module, err := loadModuleFromFile(componentFilepath)
+			if err != nil {
+				log.Fatalf("Failed to load module from file %s\n", componentFilepath)
+			}
+			module.Pull(db)
 		case "pages", "page":
 			pageUrl := getPageUrlFromFilepath(componentFilepath)
 			pullPage(db, pageUrl)
