@@ -99,13 +99,15 @@ func pullCourse(db *sql.DB, courseId int) (*Course, error) {
 		return course, errors.New("Failed to pull course from Canvas")
 	}
 
-	// TODO: prompt for overwrite, manually merge, abort
-	err := meddler.Insert(db, coursesTable, course)
-	if err != nil {
-		return course, err
-	}
+	// TODO: prompt for overwrite, manually merge/update, abort
+	/*
+		err := meddler.Insert(db, coursesTable, course)
+		if err != nil {
+			return course, err
+		}
+	*/
 
-	if _, err := os.Stat("syllabus.md"); os.IsNotExist(err) {
+	if _, err := os.Stat("syllabus.html"); os.IsNotExist(err) {
 		err = course.Dump()
 		if err != nil {
 			return course, err

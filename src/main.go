@@ -243,8 +243,12 @@ func CommandPull(cmd *cobra.Command, args []string) {
 		componentType := args[0]
 		componentFilepath := args[1]
 		switch componentType {
-		case "courses":
-			pullCourses(db) // TODO: find a reason why we'd only pull a single course
+		case "courses", "course":
+			courses, err := matchCourse(db, componentFilepath)
+			if err != nil || len(courses) != 1 {
+				log.Fatalf("Failed to find a single course for %s. %v\n", componentFilepath, err)
+			}
+			pullCourse(db, courses[0].CanvasId)
 		case "pages", "page":
 			pageUrl := getPageUrlFromFilepath(componentFilepath)
 			pullPage(db, pageUrl)
