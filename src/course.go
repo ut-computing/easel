@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 
@@ -104,8 +105,13 @@ func pullCourse(db *sql.DB, courseId int) (*Course, error) {
 		return course, err
 	}
 
-	err = course.Dump()
-	return course, err
+	if _, err := os.Stat("syllabus.md"); os.IsNotExist(err) {
+		err = course.Dump()
+		if err != nil {
+			return course, err
+		}
+	}
+	return course, nil
 }
 
 func pullCourses(db *sql.DB) ([]*Course, error) {

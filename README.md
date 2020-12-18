@@ -92,6 +92,8 @@ for the same components as previously listed.
 
 ## TODO
 
+- I've been assuming user pulls or pushes from the course's root directory. Need
+  to search for the component dirs
 - multiple courses (i.e., sections).
     - implicit iteration
         - push: pushes to all courses, unless specified (e.g., -c 02)
