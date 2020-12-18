@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/deiu/linkparser"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -333,4 +334,16 @@ func dumpBody(resp *http.Response) {
 	} else {
 		io.Copy(os.Stderr, resp.Body)
 	}
+}
+
+// Reads the file's metadata into the given target struct and returns the
+// contents as a string
+func readFile(filename string, target interface{}) (string, error) {
+	dat, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return "", err
+	}
+	fileParts := strings.Split(string(dat), "```")
+	err = yaml.Unmarshal([]byte(fileParts[1]), target)
+	return fileParts[2], err
 }

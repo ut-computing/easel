@@ -124,13 +124,32 @@ func pullCourses(db *sql.DB) ([]*Course, error) {
 	return courses, nil
 }
 
+func pushCourses(db *sql.DB) {
+	courses, err := findCourses(db)
+	if err != nil {
+		log.Fatalf("Error finding courses: %v", err)
+	}
+	for _, course := range courses {
+		syllabus, err := readFile("syllabus.md", nil)
+		if err != nil {
+			log.Fatalf("Failed to load syllabus\n")
+		}
+		course.Syllabus = syllabus
+		course.Push()
+	}
+}
+
+func (course *Course) Dump() error {
+	return writeFile("syllabus.html", "", course.Syllabus)
+}
+
 func (course *Course) GetCourseNumber() string {
 	values := strings.Split(course.Name, " ")
 	return values[0]
 }
 
-func (course *Course) Dump() error {
-	return writeFile("syllabus.html", "", course.Syllabus)
+func (course *Course) Push() error {
+	return nil
 }
 
 func (course *Course) Remove(db *sql.DB) error {

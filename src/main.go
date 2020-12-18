@@ -111,16 +111,14 @@ func main() {
 	}
 	cmd.AddCommand(cmdPull)
 
-	/*
-		// Push
-		cmdPush := &cobra.Command{
-			Use:   "push [component] [component_id]",
-			Short: "push a single component or all of that type if blank",
-			Long:  "TODO instructions",
-			Run:   CommandPush,
-		}
-		cmd.AddCommand(cmdPush)
-	*/
+	// Push
+	cmdPush := &cobra.Command{
+		Use:   "push [component_type] [component_id]",
+		Short: "push a single component or all of that type if blank",
+		Long:  "TODO instructions",
+		Run:   CommandPush,
+	}
+	cmd.AddCommand(cmdPush)
 
 	cmd.Execute()
 }
@@ -156,6 +154,7 @@ func CommandLogin(cmd *cobra.Command, args []string) {
 func CommandInit(cmd *cobra.Command, args []string) {
 	mustLoadConfig()
 	mustCreateDb()
+	// TODO: create directory structure
 }
 
 func CommandCourseAdd(cmd *cobra.Command, args []string) {
@@ -249,6 +248,56 @@ func CommandPull(cmd *cobra.Command, args []string) {
 		case "pages", "page":
 			pageUrl := getPageUrlFromFilepath(componentFilepath)
 			pullPage(db, pageUrl)
+		default:
+			log.Fatalf("Invalid component type: %s", componentType)
+		}
+	default:
+		log.Fatal("Too many arguments")
+	}
+}
+
+func CommandPush(cmd *cobra.Command, args []string) {
+	mustLoadConfig()
+	db := findDb()
+	defer db.Close()
+
+	switch len(args) {
+	case 0:
+		// push all components of all types
+		pushCourses(db)
+		pushPages(db)
+	case 1:
+		// push all components of single type
+		componentType := args[0]
+		switch componentType {
+		case "courses":
+			pushCourses(db)
+		case "pages":
+			pushPages(db)
+		default:
+			log.Fatalf("Invalid component type: %s", componentType)
+		}
+	case 2:
+		// push single item of single type
+		componentType := args[0]
+		componentFilepath := args[1]
+		switch componentType {
+		case "courses":
+			courses, err := matchCourse(db, componentFilepath)
+			if err != nil {
+				log.Fatalf("Error finding course %s\n", componentFilepath)
+			}
+			if len(courses) != 1 {
+				for _, c := range courses {
+					fmt.Println(c)
+				}
+				log.Fatalf("Failed to find a single match for %s. Narrow search query or select course id from list.")
+			}
+			courses[0].Push()
+		case "pages", "page":
+			pageUrl := getPageUrlFromFilepath(componentFilepath)
+			// TODO: flag for notifying participants of update? set field notify_of_update
+			pushPage(db, pageUrl)
 		default:
 			log.Fatalf("Invalid component type: %s", componentType)
 		}

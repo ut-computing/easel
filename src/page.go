@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/url"
 	"path/filepath"
@@ -71,12 +72,23 @@ func getPageUrlFromFilepath(pagefilepath string) string {
 	return basename[:len(basename)-len(ext)] // remove extension
 }
 
-func pullPage(db *sql.DB, pageUrl string) {
+func loadPage(db *sql.DB, pageUrl string) *Page {
 	page := new(Page)
+	body, err := readFile(fmt.Sprintf("%s/%s.md", pagesDir, pageUrl), page)
+	if err != nil {
+		log.Fatalf("Failed to load page %s\n", pageUrl)
+	}
+	page.Body = body
+	return page
+}
+
+func pullPage(db *sql.DB, pageUrl string) {
 	courses, _ := findCourses(db)
 	// TODO: do it for all courses
 	courseId := courses[0].CanvasId
 	pageFullPath := fmt.Sprintf(pagePath, courseId, pageUrl)
+
+	page := new(Page)
 	fmt.Println("Pulling page", pageFullPath)
 	mustGetObject(pageFullPath, url.Values{}, page)
 	page.Dump()
@@ -88,6 +100,38 @@ func pullAllPages(db *sql.DB) {
 
 	for _, page := range pagesMeta {
 		pullPage(db, page.Url)
+	}
+}
+
+func pushPage(db *sql.DB, pageUrl string) {
+	page := loadPage(db, pageUrl)
+	wikiPage := map[string]interface{}{
+		"wiki_page": map[string]interface{}{
+			"title": page.Title,
+			// "body":             page.Body,
+			"editing_roles":    "teachers", // TODO: make configurable
+			"notify_of_update": false,      // TODO: make configurable (cobra flag)
+			"published":        page.Published,
+			"front_page":       page.FrontPage,
+		},
+	}
+	courses, _ := findCourses(db)
+	for _, course := range courses {
+		courseId := courses[0].CanvasId
+		pageFullPath := fmt.Sprintf(pagePath, courseId, pageUrl)
+		fmt.Printf("Pushing page %s to %s\n", pageUrl, course.Name)
+		mustPutObject(pageFullPath, url.Values{}, wikiPage, nil)
+	}
+}
+
+func pushPages(db *sql.DB) {
+	files, err := ioutil.ReadDir(pagesDir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, f := range files {
+		pushPage(db, getPageUrlFromFilepath(f.Name()))
 	}
 }
 
