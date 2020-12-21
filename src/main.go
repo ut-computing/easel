@@ -228,9 +228,8 @@ func CommandPull(cmd *cobra.Command, args []string) {
 
 	switch len(args) {
 	case 0:
-		// pull all components of all types
+		// TODO: pull all components of all types
 		pullCourses(db)
-		pullAllPages(db)
 	case 1:
 		// pull all components of single type
 		componentType := args[0]
@@ -242,7 +241,7 @@ func CommandPull(cmd *cobra.Command, args []string) {
 		case "modules":
 			pullModules(db)
 		case "pages":
-			pullAllPages(db)
+			pullPages(db)
 		default:
 			log.Fatalf("Invalid component type: %s", componentType)
 		}
@@ -252,7 +251,8 @@ func CommandPull(cmd *cobra.Command, args []string) {
 		componentFilepath := args[1]
 		switch componentType {
 		case "assignments", "assignment":
-			assignment, err := loadAssignmentFromFile(componentFilepath)
+			assignment := new(Assignment)
+			_, err := readFile(componentFilepath, assignment)
 			if err != nil {
 				log.Fatalf("Failed to load assignment from file %s\n", componentFilepath)
 			}
@@ -264,14 +264,16 @@ func CommandPull(cmd *cobra.Command, args []string) {
 			}
 			pullCourse(db, courses[0].CanvasId)
 		case "modules", "module":
-			module, err := loadModuleFromFile(componentFilepath)
+			module := new(Module)
+			err := readYamlFile(componentFilepath, module)
 			if err != nil {
 				log.Fatalf("Failed to load module from file %s\n", componentFilepath)
 			}
 			module.Pull(db)
 		case "pages", "page":
-			pageUrl := getPageUrlFromFilepath(componentFilepath)
-			pullPage(db, pageUrl)
+			page := new(Page)
+			page.Url = getPageUrlFromFilepath(componentFilepath)
+			page.Pull(db)
 		default:
 			log.Fatalf("Invalid component type: %s", componentType)
 		}

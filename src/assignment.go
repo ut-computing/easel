@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"net/url"
-	"strings"
 
 	"gopkg.in/yaml.v2"
 )
@@ -153,17 +152,9 @@ func getAssignments(db *sql.DB) []*Assignment {
 	return assignments
 }
 
-func loadAssignmentFromFile(assignmentFilepath string) (*Assignment, error) {
-	assignment := new(Assignment)
-	err := readYamlFile(assignmentFilepath, assignment)
-	return assignment, err
-}
-
 func pullAssignments(db *sql.DB) {
-	assignmentsMeta := getAssignments(db)
-	// TODO: prompt for overwrite, etc.
-
-	for _, assignment := range assignmentsMeta {
+	assignments := getAssignments(db)
+	for _, assignment := range assignments {
 		assignment.Pull(db)
 	}
 }
@@ -177,17 +168,10 @@ func (assignment *Assignment) Dump() error {
 	return writeFile(assignmentFilePath, string(metadata), assignment.Description)
 }
 
-func (assignment *Assignment) Pull(db *sql.DB) {
-	courses, _ := findCourses(db)
-	// TODO: do it for all courses
-	courseId := courses[0].CanvasId
-	assignmentFullPath := fmt.Sprintf(assignmentPath, courseId, assignment.CanvasId)
-
-	fmt.Println("Pulling assignment", assignmentFullPath)
-	mustGetObject(assignmentFullPath, url.Values{}, assignment)
-	assignment.Dump()
+func (assignment *Assignment) Pull(db *sql.DB) error {
+	return pullComponent(db, assignmentPath, assignment.CanvasId, assignment)
 }
 
 func (assignment *Assignment) Slug() string {
-	return strings.ToLower(strings.ReplaceAll(assignment.Name, " ", "-"))
+	return slug(assignment.Name)
 }

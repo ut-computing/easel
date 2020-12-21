@@ -35,7 +35,7 @@ type Page struct {
 	FrontPage bool `json:"front_page" yaml:"front_page" meddler:"front_page" `
 }
 
-func getAllPages(db *sql.DB) []*Page {
+func getPages(db *sql.DB) []*Page {
 	pages := make([]*Page, 0)
 	courses, _ := findCourses(db)
 	values := url.Values{}
@@ -63,24 +63,10 @@ func loadPage(db *sql.DB, pageUrl string) *Page {
 	return page
 }
 
-func pullPage(db *sql.DB, pageUrl string) {
-	courses, _ := findCourses(db)
-	// TODO: do it for all courses
-	courseId := courses[0].CanvasId
-	pageFullPath := fmt.Sprintf(pagePath, courseId, pageUrl)
-
-	page := new(Page)
-	fmt.Println("Pulling page", pageFullPath)
-	mustGetObject(pageFullPath, url.Values{}, page)
-	page.Dump()
-}
-
-func pullAllPages(db *sql.DB) {
-	pagesMeta := getAllPages(db)
-	// TODO: prompt for overwrite, etc.
-
-	for _, page := range pagesMeta {
-		pullPage(db, page.Url)
+func pullPages(db *sql.DB) {
+	pages := getPages(db)
+	for _, page := range pages {
+		page.Pull(db)
 	}
 }
 
@@ -123,4 +109,8 @@ func (page *Page) Dump() error {
 	}
 	pageFilePath := fmt.Sprintf("%s/%s.md", pagesDir, page.Url)
 	return writeFile(pageFilePath, string(metadata), page.Body)
+}
+
+func (page *Page) Pull(db *sql.DB) error {
+	return pullComponent(db, pagePath, page.Url, page)
 }

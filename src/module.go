@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"net/url"
-	"strings"
 
 	"github.com/russross/meddler"
 	"gopkg.in/yaml.v2"
@@ -83,12 +82,6 @@ type CompletionRequirement struct {
 	Completed bool   `json:"completed" yaml:"completed" meddler:"completed"`
 }
 
-func loadModuleFromFile(moduleFilepath string) (*Module, error) {
-	module := new(Module)
-	err := readYamlFile(moduleFilepath, module)
-	return module, err
-}
-
 func getModules(db *sql.DB) []*Module {
 	modules := make([]*Module, 0)
 	courses, _ := findCourses(db)
@@ -101,27 +94,15 @@ func getModules(db *sql.DB) []*Module {
 	return modules
 }
 
-func pullModule(db *sql.DB, moduleId int) error {
-	module := new(Module)
-	module.Id = moduleId
-	err := module.Pull(db)
-	if err != nil {
-		return err
-	}
-	return module.Save(db)
-}
-
 func pullModules(db *sql.DB) {
-	modulesMeta := getModules(db)
-	// TODO: prompt for overwrite, etc.
-
-	for _, module := range modulesMeta {
-		pullModule(db, module.CanvasId)
+	modules := getModules(db)
+	for _, module := range modules {
+		module.Pull(db)
 	}
 }
 
 func (module *Module) Slug() string {
-	return strings.ToLower(strings.ReplaceAll(module.Name, " ", "-"))
+	return slug(module.Name)
 }
 
 func (module *Module) Dump() error {
@@ -134,15 +115,7 @@ func (module *Module) Dump() error {
 }
 
 func (module *Module) Pull(db *sql.DB) error {
-	courses, _ := findCourses(db)
-	// TODO: do it for all courses
-	courseId := courses[0].CanvasId
-	moduleFullPath := fmt.Sprintf(modulePath, courseId, module.Id)
-	values := url.Values{}
-	values.Add("include[]", "items, content_details")
-	fmt.Println("Pulling module", moduleFullPath, values)
-	mustGetObject(moduleFullPath, values, module)
-	return module.Dump()
+	return pullComponent(db, modulePath, module.CanvasId, module)
 }
 
 func (module *Module) Save(db *sql.DB) error {
