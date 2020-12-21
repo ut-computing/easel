@@ -15,6 +15,8 @@ const (
 	cmdName                       = "easel"
 	perUserDotFile                = "." + cmdName + "rc"
 	urlPrefix                     = "/api/v1"
+	assignmentsPath               = coursePath + "/assignments"
+	assignmentPath                = assignmentsPath + "/%d"
 	coursesPath                   = "/courses"
 	coursePath                    = coursesPath + "/%d"
 	modulesPath                   = coursePath + "/modules"
@@ -29,8 +31,6 @@ const (
 	quizSubmissionQuestionsPath   = "/quiz_submissions/%d/questions"
 	quizReportsPath               = quizPath + "/reports"
 	quizReportPath                = quizReportsPath + "/%d"
-	assignmentsPath               = coursePath + "/assignments"
-	assignmentPath                = assignmentsPath + "/%d"
 	assignmentSubmissionsPath     = assignmentPath + "/submissions"
 	gradeAssignmentSubmissionPath = assignmentSubmissionsPath + "/%d" // user_id
 	progressPath                  = "/progress/%d"
@@ -235,6 +235,8 @@ func CommandPull(cmd *cobra.Command, args []string) {
 		// pull all components of single type
 		componentType := args[0]
 		switch componentType {
+		case "assignments":
+			pullAssignments(db)
 		case "courses":
 			pullCourses(db)
 		case "modules":
@@ -249,6 +251,12 @@ func CommandPull(cmd *cobra.Command, args []string) {
 		componentType := args[0]
 		componentFilepath := args[1]
 		switch componentType {
+		case "assignments", "assignment":
+			assignment, err := loadAssignmentFromFile(componentFilepath)
+			if err != nil {
+				log.Fatalf("Failed to load assignment from file %s\n", componentFilepath)
+			}
+			assignment.Pull(db)
 		case "courses", "course":
 			courses, err := matchCourse(db, componentFilepath)
 			if err != nil || len(courses) != 1 {
