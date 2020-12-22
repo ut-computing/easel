@@ -236,15 +236,15 @@ func CommandPull(cmd *cobra.Command, args []string) {
 		// pull all components of single type
 		componentType := args[0]
 		switch componentType {
-		case "assignments":
+		case "assignments", "a":
 			pullAssignments(db)
-		case "assignment_groups", "ags":
+		case "assignment_groups", "ag":
 			pullAssignmentGroups(db)
-		case "courses":
+		case "courses", "c":
 			pullCourses(db)
-		case "modules":
+		case "modules", "m":
 			pullModules(db)
-		case "pages":
+		case "pages", "p":
 			pullPages(db)
 		default:
 			log.Fatalf("Invalid component type: %s", componentType)
@@ -254,34 +254,34 @@ func CommandPull(cmd *cobra.Command, args []string) {
 		componentType := args[0]
 		componentFilepath := args[1]
 		switch componentType {
-		case "assignments", "assignment":
+		case "assignments", "assignment", "a":
 			assignment := new(Assignment)
 			_, err := readFile(componentFilepath, assignment)
 			if err != nil {
 				log.Fatalf("Failed to load assignment from file %s\n", componentFilepath)
 			}
 			assignment.Pull(db)
-		case "assignment_groups", "assignment_group", "ags", "ag":
+		case "assignment_groups", "assignment_group", "ag":
 			ag := new(AssignmentGroup)
 			err := readYamlFile(componentFilepath, ag)
 			if err != nil {
 				log.Fatalf("Failed to load module from file %s\n", componentFilepath)
 			}
 			ag.Pull(db)
-		case "courses", "course":
+		case "courses", "course", "c":
 			courses, err := matchCourse(db, componentFilepath)
 			if err != nil || len(courses) != 1 {
 				log.Fatalf("Failed to find a single course for %s. %v\n", componentFilepath, err)
 			}
 			pullCourse(db, courses[0].CanvasId)
-		case "modules", "module":
+		case "modules", "module", "m":
 			module := new(Module)
 			err := readYamlFile(componentFilepath, module)
 			if err != nil {
 				log.Fatalf("Failed to load module from file %s\n", componentFilepath)
 			}
 			module.Pull(db)
-		case "pages", "page":
+		case "pages", "page", "p":
 			page := new(Page)
 			page.Url = getPageUrlFromFilepath(componentFilepath)
 			page.Pull(db)
