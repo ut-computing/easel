@@ -116,8 +116,11 @@ for the same components as previously listed.
 ### Thoughts
 
 - Enforce directories? (e.g., pages, assignments, modules)
+    - Or when pushing a component, save its filepath in the db
+- Component files that only have yaml (no md or html), should the extension be
+  yaml or stay consistent with md?
 - We should enable expressing dates/times that are relative to the section
-  meeting time (e.g., beginning of class, end of class)
+  meeting time (e.g., beginning of class, end of class, Fridays)
 - would it be worth adding in grading stuff eventually?
 - Some fields would be useful to Easel but not necessary for instructor edits
   (e.g., record ids, component status).

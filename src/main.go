@@ -17,6 +17,8 @@ const (
 	urlPrefix                     = "/api/v1"
 	assignmentsPath               = coursePath + "/assignments"
 	assignmentPath                = assignmentsPath + "/%d"
+	assignmentGroupsPath          = coursePath + "/assignment_groups"
+	assignmentGroupPath           = assignmentGroupsPath + "/%d"
 	coursesPath                   = "/courses"
 	coursePath                    = coursesPath + "/%d"
 	modulesPath                   = coursePath + "/modules"
@@ -236,6 +238,8 @@ func CommandPull(cmd *cobra.Command, args []string) {
 		switch componentType {
 		case "assignments":
 			pullAssignments(db)
+		case "assignment_groups", "ags":
+			pullAssignmentGroups(db)
 		case "courses":
 			pullCourses(db)
 		case "modules":
@@ -257,6 +261,13 @@ func CommandPull(cmd *cobra.Command, args []string) {
 				log.Fatalf("Failed to load assignment from file %s\n", componentFilepath)
 			}
 			assignment.Pull(db)
+		case "assignment_groups", "assignment_group", "ags", "ag":
+			ag := new(AssignmentGroup)
+			err := readYamlFile(componentFilepath, ag)
+			if err != nil {
+				log.Fatalf("Failed to load module from file %s\n", componentFilepath)
+			}
+			ag.Pull(db)
 		case "courses", "course":
 			courses, err := matchCourse(db, componentFilepath)
 			if err != nil || len(courses) != 1 {
