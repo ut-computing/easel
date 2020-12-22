@@ -246,6 +246,8 @@ func CommandPull(cmd *cobra.Command, args []string) {
 			pullModules(db)
 		case "pages", "p":
 			pullPages(db)
+		case "quizzes", "q":
+			pullQuizzes(db)
 		default:
 			log.Fatalf("Invalid component type: %s", componentType)
 		}
@@ -285,6 +287,13 @@ func CommandPull(cmd *cobra.Command, args []string) {
 			page := new(Page)
 			page.Url = getPageUrlFromFilepath(componentFilepath)
 			page.Pull(db)
+		case "quizzes", "quiz", "q":
+			quiz := new(Quiz)
+			_, err := readFile(componentFilepath, quiz)
+			if err != nil {
+				log.Fatalf("Failed to load quiz from file %s\n", componentFilepath)
+			}
+			quiz.Pull(db)
 		default:
 			log.Fatalf("Invalid component type: %s", componentType)
 		}

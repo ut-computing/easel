@@ -1,84 +1,115 @@
 package main
 
+import (
+	"database/sql"
+	"fmt"
+	"net/url"
+
+	"gopkg.in/yaml.v2"
+)
+
+const (
+	quizzesTable = "quizzes"
+	quizzesDir   = "quizzes" // TODO: make configable
+)
+
 type Quiz struct {
-	// the ID of the quiz
-	Id int `json:"id"`
-	// the title of the quiz
-	Title string `json:"title"`
-	// the HTTP/HTTPS URL to the quiz
-	HtmlUrl string `json:"html_url"`
-	// A url that can be visited in the browser with a POST request to preview a
-	// quiz as the teacher. Only present when the user may grade
-	PreviewUrl string `json:"preview_url"`
-	// the description of the quiz
-	Description string `json:"description"`
-	// type of quiz possible values: 'practice_quiz', 'assignment', 'graded_survey',
-	// 'survey'
-	QuizType string `json:"quiz_type"`
-	// the ID of the quiz's assignment group:
-	AssignmentGroupId int `json:"assignment_group_id"`
-	// quiz time limit in minutes
-	TimeLimit int `json:"time_limit"`
-	// shuffle answers for students?
-	ShuffleAnswers bool `json:"shuffle_answers"`
+	Id                 int     `json:"-" yaml:"-" meddler:"id,pk"`
+	CanvasId           int     `json:"id" yaml:"id" meddler:"canvas_id"`
+	Title              string  `json:"title" yaml:"title" meddler:"title"`
+	Description        string  `json:"description" yaml:"-" meddler:"description"` // the description of the quiz
+	QuestionCount      int     `json:"question_count" yaml:"question_count" meddler:"question_count"`
+	PointsPossible     float64 `json:"points_possible" yaml:"points_possible" meddler:"points_possible"`
+	HtmlUrl            string  `json:"html_url" yaml:"html_url" meddler:"html_url"` // the HTTP/HTTPS URL to the quiz
+	AccessCode         string  `json:"access_code" yaml:"access_code" meddler:"access_code"`
+	OneQuestionAtATime bool    `json:"one_question_at_a_time" yaml:"one_question_at_a_time" meddler:"one_question_at_a_time"`
+	CantGoBack         bool    `json:"cant_go_back" yaml:"cant_go_back" meddler:"cant_go_back"` // lock questions after answering? only valid if one_question_at_a_time=true
+	TimeLimit          int     `json:"time_limit" yaml:"time_limit" meddler:"time_limit"`       // quiz time limit in minutes
+	ShuffleAnswers     bool    `json:"shuffle_answers" yaml:"shuffle_answers" meddler:"shuffle_answers"`
+	IpFilter           string  `json:"ip_filter" yaml:"ip_filter" meddler:"ip_filter"`
+	DueAt              string  `json:"due_at" yaml:"due_at" meddler:"due_at"`
+	LockAt             string  `json:"lock_at" yaml:"lock_at" meddler:"lock_at"`
+	UnlockAt           string  `json:"unlock_at" yaml:"unlock_at" meddler:"unlock_at"`
+	Published          bool    `json:"published" yaml:"published" meddler:"published"`
+	AssignmentGroupId  int     `json:"assignment_group_id" yaml:"assignment_group_id" meddler:"assignment_group_id"` // the ID of the quiz's assignment group:
+
+	// how many times a student can take the quiz (-1 = unlimited attempts)
+	AllowedAttempts int `json:"allowed_attempts" yaml:"allowed_attempts" meddler:"allowed_attempts"`
+
 	// let students see their quiz responses? possible values: null, 'always',
 	// 'until_after_last_attempt'
-	HideResults string `json:"hide_results"`
+	HideResults string `json:"hide_results" yaml:"hide_results" meddler:"hide_results"`
+
 	// show which answers were correct when results are shown? only valid if
 	// hide_results=null
-	ShowCorrectAnswers bool `json:"show_correct_answers"`
+	ShowCorrectAnswers bool `json:"show_correct_answers" yaml:"show_correct_answers" meddler:"show_correct_answers"`
+
 	// restrict the show_correct_answers option above to apply only to the last
 	// submitted attempt of a quiz that allows multiple attempts. only valid if
 	// show_correct_answers=true and allowed_attempts > 1
-	ShowCorrectAnswersLastAttempt bool `json:"show_correct_answers_last_attempt"`
+	ShowCorrectAnswersLastAttempt bool `json:"show_correct_answers_last_attempt" yaml:"show_correct_answers_last_attempt" meddler:"show_correct_answers_last_attempt"`
+
 	// when should the correct answers be visible by students? only valid if
 	// show_correct_answers=true
-	ShowCorrectAnswersAt string `json:"show_correct_answers_at"`
+	ShowCorrectAnswersAt string `json:"show_correct_answers_at" yaml:"show_correct_answers_at" meddler:"show_correct_answers_at"`
+
 	// prevent the students from seeing correct answers after the specified date has
 	// passed. only valid if show_correct_answers=true
-	HideCorrectAnswersAt string `json:"hide_correct_answers_at"`
+	HideCorrectAnswersAt string `json:"hide_correct_answers_at" yaml:"hide_correct_answers_at" meddler:"hide_correct_answers_at"`
+
 	// prevent the students from seeing their results more than once (right after
 	// they submit the quiz)
-	OneTimeResults bool `json:"one_time_results"`
+	OneTimeResults bool `json:"one_time_results" yaml:"one_time_results" meddler:"one_time_results"`
+
 	// which quiz score to keep (only if allowed_attempts != 1) possible values:
 	// 'keep_highest', 'keep_latest'
-	ScoringPolicy string `json:"scoring_policy"`
-	// how many times a student can take the quiz -1 = unlimited attempts
-	AllowedAttempts int `json:"allowed_attempts"`
-	// show one question at a time?
-	OneQuestionAtATime bool `json:"one_question_at_a_time"`
-	// the number of questions in the quiz
-	QuestionCount int `json:"question_count"`
-	// The total point value given to the quiz
-	PointsPossible int `json:"points_possible"`
-	// lock questions after answering? only valid if one_question_at_a_time=true
-	CantGoBack bool `json:"cant_go_back"`
-	// access code to restrict quiz access
-	AccessCode string `json:"access_code"`
-	// IP address or range that quiz access is limited to
-	IpFilter string `json:"ip_filter"`
-	// when the quiz is due
-	DueAt string `json:"due_at"`
-	// when to lock the quiz
-	LockAt string `json:"lock_at"`
-	// when to unlock the quiz
-	UnlockAt string `json:"unlock_at"`
-	// whether the quiz has a published or unpublished draft state.
-	Published bool `json:"published"`
-	// Whether the assignment's 'published' state can be changed to false. Will be
-	// false if there are student submissions for the quiz.
-	Unpublishable bool `json:"unpublishable"`
-	// Whether or not this is locked for the user.
-	LockedForUser bool `json:"locked_for_user"`
+	ScoringPolicy string `json:"scoring_policy" yaml:"scoring_policy" meddler:"scoring_policy"`
+
+	// type of quiz possible values: 'practice_quiz', 'assignment', 'graded_survey',
+	// 'survey'
+	QuizType string `json:"quiz_type" yaml:"quiz_type" meddler:"quiz_type"`
+
+	// A url that can be visited in the browser with a POST request to preview a
+	// quiz as the teacher. Only present when the user may grade
+	PreviewUrl string `json:"preview_url" yaml:"preview_url" meddler:"preview_url"`
+
 	// Whether survey submissions will be kept anonymous (only applicable to
 	// 'graded_survey', 'survey' quiz types)
-	AnonymousSubmissions bool `json:"anonymous_submissions"`
+	AnonymousSubmissions bool `json:"anonymous_submissions" yaml:"anonymous_submissions" meddler:"anonymous_submissions"`
 }
 
-func pullQuizzes(id string) {
-	if id == "all" {
-		// TODO: get all
-	} else {
-		// TODO: get single
+func getQuizzes(db *sql.DB) []*Quiz {
+	quizzes := make([]*Quiz, 0)
+	courses, _ := findCourses(db)
+	values := url.Values{}
+	values.Add("per_page", "100")
+	// TODO: do it for all courses
+	courseId := courses[0].CanvasId
+	reqUrl := fmt.Sprintf(quizzesPath, courseId)
+	mustGetObject(reqUrl, values, &quizzes)
+	return quizzes
+}
+
+func pullQuizzes(db *sql.DB) {
+	quizzes := getQuizzes(db)
+	for _, quiz := range quizzes {
+		quiz.Dump()
 	}
+}
+
+func (quiz *Quiz) Dump() error {
+	metadata, err := yaml.Marshal(quiz)
+	if err != nil {
+		return err
+	}
+	quizFilePath := fmt.Sprintf("%s/%s.md", quizzesDir, quiz.Slug())
+	return writeFile(quizFilePath, string(metadata), quiz.Description)
+}
+
+func (quiz *Quiz) Pull(db *sql.DB) error {
+	return pullComponent(db, quizPath, quiz.CanvasId, quiz)
+}
+
+func (quiz *Quiz) Slug() string {
+	return slug(quiz.Title)
 }
