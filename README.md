@@ -99,6 +99,9 @@ for the same components as previously listed.
         - push: pushes to all courses, unless specified (e.g., -c 02)
         - pull: pulls from all courses, checks for and reports any differences
             - need to add a prompt for overwrite, manually merge, or abort
+            - need to track multiple canvas ids per component in the db. I'm
+              saving the canvas id on each component as if it would be the same
+              across all courses, but this is not the case.
 - Figure out the workflow for editing page/assignment content. Canvas uses html,
   I'd prefer to express it in markdown.
   - First proposal: locally in markdown, convert to html when pushing. Don't
@@ -125,3 +128,11 @@ for the same components as previously listed.
 - Some fields would be useful to Easel but not necessary for instructor edits
   (e.g., record ids, component status).
   Do we keep those in the DB but not write them to file?
+- should quiz questions be in their own file? Options:
+    - a single quiz's questions in one file. easier to implement but it would be
+      harder to reuse them
+    - one file per question, easy to move around, but how to uniquely identify
+      each question? (for the name of the file)
+    - one file per question category (e.g., all requrements engineering
+      questions) this is probably the best user-focused approach, but harder to
+      implement?

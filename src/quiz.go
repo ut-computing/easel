@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	quizzesTable = "quizzes"
-	quizzesDir   = "quizzes" // TODO: make configable
+	quizzesTable        = "quizzes"
+	quizzesDir          = "quizzes" // TODO: make configable
+	quizQuestionsSuffix = "_questions"
 )
 
 type Quiz struct {
@@ -75,7 +76,8 @@ type Quiz struct {
 
 	// Whether survey submissions will be kept anonymous (only applicable to
 	// 'graded_survey', 'survey' quiz types)
-	AnonymousSubmissions bool `json:"anonymous_submissions" yaml:"anonymous_submissions" meddler:"anonymous_submissions"`
+	AnonymousSubmissions bool            `json:"anonymous_submissions" yaml:"anonymous_submissions" meddler:"anonymous_submissions"`
+	QuizQuestions        []*QuizQuestion `json:"-" yaml:"-" meddler:"-"`
 }
 
 func getQuizzes(db *sql.DB) []*Quiz {
@@ -87,6 +89,10 @@ func getQuizzes(db *sql.DB) []*Quiz {
 	courseId := courses[0].CanvasId
 	reqUrl := fmt.Sprintf(quizzesPath, courseId)
 	mustGetObject(reqUrl, values, &quizzes)
+	// get the quiz's questions while we're here
+	for _, quiz := range quizzes {
+		quiz.QuizQuestions = getQuizQuestions(courseId, quiz.CanvasId)
+	}
 	return quizzes
 }
 
@@ -102,11 +108,28 @@ func (quiz *Quiz) Dump() error {
 	if err != nil {
 		return err
 	}
+
 	quizFilePath := fmt.Sprintf("%s/%s.md", quizzesDir, quiz.Slug())
-	return writeFile(quizFilePath, string(metadata), quiz.Description)
+	err = writeFile(quizFilePath, string(metadata), quiz.Description)
+	if err != nil {
+		return err
+	}
+
+	// Dump the questions too, for now put all in one file
+	qqs, err := yaml.Marshal(quiz.QuizQuestions)
+	if err != nil {
+		return err
+	}
+	quizQuestionsFilePath := fmt.Sprintf("%s/%s%s.md", quizzesDir, quiz.Slug(), quizQuestionsSuffix)
+	return writeYamlFile(quizQuestionsFilePath, string(qqs))
 }
 
 func (quiz *Quiz) Pull(db *sql.DB) error {
+	// get the quiz questions
+	courses, _ := findCourses(db)
+	courseId := courses[0].CanvasId
+	quiz.QuizQuestions = getQuizQuestions(courseId, quiz.CanvasId)
+	// pull the quiz and then dump it and its questions
 	return pullComponent(db, quizPath, quiz.CanvasId, quiz)
 }
 
