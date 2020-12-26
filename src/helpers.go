@@ -146,27 +146,15 @@ func prepareRequest(reqUrl string, params url.Values, method string, upload inte
 	// upload the payload if any
 	if upload != nil && (method == "POST" || method == "PUT") {
 		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Content-Encoding", "gzip")
 		payload := new(bytes.Buffer)
-		gw := gzip.NewWriter(payload)
-		uncompressed := new(bytes.Buffer)
-		var jsontarget io.Writer
-		if Config.apiDump {
-			jsontarget = io.MultiWriter(gw, uncompressed)
-		} else {
-			jsontarget = gw
-		}
-		jw := json.NewEncoder(jsontarget)
+		jw := json.NewEncoder(payload)
 		if err := jw.Encode(upload); err != nil {
 			log.Fatalf("doRequest: JSON error encoding object to upload: %v", err)
-		}
-		if err := gw.Close(); err != nil {
-			log.Fatalf("doRequest: gzip error encoding object to upload: %v", err)
 		}
 		req.Body = ioutil.NopCloser(payload)
 
 		if Config.apiDump {
-			log.Printf("Request data: %s", uncompressed)
+			log.Printf("Request data: %s", payload)
 		}
 	}
 	return req, nil

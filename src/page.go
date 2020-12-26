@@ -74,8 +74,8 @@ func pushPage(db *sql.DB, pageUrl string) {
 	page := loadPage(db, pageUrl)
 	wikiPage := map[string]interface{}{
 		"wiki_page": map[string]interface{}{
-			"title": page.Title,
-			// "body":             page.Body,
+			"title":            page.Title,
+			"body":             page.Body,
 			"editing_roles":    "teachers", // TODO: make configurable
 			"notify_of_update": false,      // TODO: make configurable (cobra flag)
 			"published":        page.Published,
