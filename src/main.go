@@ -320,7 +320,7 @@ func CommandPush(cmd *cobra.Command, args []string) {
 		componentType := args[0]
 		componentFilepath := args[1]
 		switch componentType {
-		case "courses":
+		case "courses", "course", "c":
 			courses, err := matchCourse(db, componentFilepath)
 			if err != nil {
 				log.Fatalf("Error finding course %s\n", componentFilepath)

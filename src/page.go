@@ -68,14 +68,14 @@ func pullPages(db *sql.DB) {
 
 func pushPage(db *sql.DB, pageUrl string) {
 	page := loadPage(db, pageUrl)
-	mdBody := string(blackfriday.MarkdownCommon([]byte(page.Body)))
+	bodyHtml := string(blackfriday.MarkdownCommon([]byte(page.Body)))
 	// Using a map here because Canvas doesn't like it when we PUT with fields
 	// such as CreatedAt and I can't figure out how to remove them only for
 	// marshaling.
 	wikiPage := map[string]interface{}{
 		"wiki_page": map[string]interface{}{
 			"title":            page.Title,
-			"body":             mdBody,
+			"body":             bodyHtml,
 			"editing_roles":    page.EditingRoles,
 			"notify_of_update": false, // TODO: make configurable (cobra flag)
 			"published":        page.Published,

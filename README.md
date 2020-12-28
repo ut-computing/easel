@@ -31,13 +31,13 @@ course directory.
 ### Course
 
 ```
-easel course <canvas_course_url>
+easel course add <canvas_course_url>
 ```
 
 E.g.,
 
 ```
-easel course https://dixie.instructure.com/courses/615446
+easel course add https://dixie.instructure.com/courses/615446
 ```
 
 Hooks up the database to a Canvas course. Run this one time per Canvas course
@@ -114,6 +114,7 @@ easel push pages
 Reads each page in the component type's directory and pushes them to each
 configured course in Canvas. Currently works for the following components:
 
+- courses
 - pages
 - more to come!
 

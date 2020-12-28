@@ -4,12 +4,14 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/russross/blackfriday"
 	"github.com/russross/meddler"
 )
 
@@ -22,10 +24,12 @@ type Course struct {
 	CanvasId int    `json:"id" yaml:"id" meddler:"canvas_id"`
 	Name     string `json:"name" yaml:"name" meddler:"name"`
 	Code     string `json:"course_code" yaml:"course_code" meddler:"code"`
+	Syllabus string `json:"syllabus_body" yaml:"-" meddler:"-"`
+
 	// the current state of the course one of 'unpublished', 'available',
-	// 'completed', or 'deleted'
+	// 'completed', or 'deleted'. Doesn't look like we can edit this, but
+	// including it for informational purposes.
 	WorkflowState string `json:"workflow_state" yaml:"workflow_state" meddler:"workflow_state"`
-	Syllabus      string `json:"syllabus_body" yaml:"-" meddler:"-"`
 }
 
 func mustCreateCoursesTable(db *sql.DB) {
@@ -101,13 +105,8 @@ func pullCourse(db *sql.DB, courseId int) (*Course, error) {
 
 	// TODO: prompt for overwrite, manually merge/update, abort
 
-	if _, err := os.Stat("syllabus.html"); os.IsNotExist(err) {
-		err = course.Dump()
-		if err != nil {
-			return course, err
-		}
-	}
-	return course, nil
+	err := course.Dump()
+	return course, err
 }
 
 func pullCourses(db *sql.DB) ([]*Course, error) {
@@ -132,17 +131,15 @@ func pushCourses(db *sql.DB) {
 		log.Fatalf("Error finding courses: %v", err)
 	}
 	for _, course := range courses {
-		syllabus, err := readFile("syllabus.md", nil)
-		if err != nil {
-			log.Fatalf("Failed to load syllabus\n")
-		}
-		course.Syllabus = syllabus
 		course.Push()
 	}
 }
 
 func (course *Course) Dump() error {
-	return writeFile("syllabus.html", "", course.Syllabus)
+	if _, err := os.Stat("syllabus.md"); os.IsNotExist(err) {
+		return writeFile("syllabus.md", "", course.Syllabus)
+	}
+	return nil
 }
 
 func (course *Course) GetCourseNumber() string {
@@ -151,6 +148,20 @@ func (course *Course) GetCourseNumber() string {
 }
 
 func (course *Course) Push() error {
+	syllabusmd, err := ioutil.ReadFile("syllabus.md")
+	if err != nil {
+		return err
+	}
+	syllabushtml := string(blackfriday.MarkdownCommon(syllabusmd))
+	c := map[string]interface{}{
+		"course": map[string]interface{}{
+			"name":          course.Name,
+			"syllabus_body": syllabushtml,
+		},
+	}
+	courseFullPath := fmt.Sprintf(coursePath, course.CanvasId)
+	fmt.Printf("Pushing %s\n", course.Name)
+	mustPutObject(courseFullPath, url.Values{}, c, nil)
 	return nil
 }
 
