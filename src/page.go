@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"path/filepath"
 
+	"github.com/russross/blackfriday"
 	"gopkg.in/yaml.v2"
 )
 
@@ -17,22 +18,17 @@ const (
 )
 
 type Page struct {
-	Id int `json:"-" yaml:"-" meddler:"id,pk"`
-	// the unique locator for the page, e.g., "my-page-title"
-	Url string `json:"url" yaml:"url" meddler:"url"`
-	// the title of the page
-	Title string `json:"title" yaml:"title" meddler:"title" `
-	// the creation date for the page
-	CreatedAt string `json:"created_at" yaml:"created_at" meddler:"created_at" `
-	// the date the page was last updated
-	UpdatedAt string `json:"updated_at" yaml:"updated_at" meddler:"updated_at" `
-	// the page content, in HTML (present when requesting a single page; omitted
-	// when listing pages)
-	Body string `json:"body" yaml:"-" meddler:"body" `
-	// whether the page is published (true) or draft state (false).
-	Published bool `json:"published" yaml:"published" meddler:"published" `
-	// whether this page is the front page for the wiki
-	FrontPage bool `json:"front_page" yaml:"front_page" meddler:"front_page" `
+	Id             int    `json:"-" yaml:"-" meddler:"id,pk"`
+	Url            string `json:"url" yaml:"url" meddler:"url"` // the unique locator for the page, e.g., "my-page-title"
+	Title          string `json:"title" yaml:"title" meddler:"title" `
+	CreatedAt      string `json:"created_at" yaml:"created_at" meddler:"created_at" `
+	UpdatedAt      string `json:"updated_at" yaml:"updated_at" meddler:"updated_at" `
+	Body           string `json:"body" yaml:"-" meddler:"body" `                      // the page content, in HTML
+	Published      bool   `json:"published" yaml:"published" meddler:"published" `    // whether the page is published (true) or draft state (false).
+	FrontPage      bool   `json:"front_page" yaml:"front_page" meddler:"front_page" ` // whether this page is the front page for the wiki
+	TodoDate       string `json:"todo_date" yaml:"todo_date" meddler:"todo_date"`
+	EditingRoles   string `json:"editing_roles" yaml:"editing_roles" meddler:"editing_roles"` // command separated string: "teachers,students,members,public"
+	NotifyOfUpdate bool   `json:"notify_of_update" yaml:"-" meddler:"-"`
 }
 
 func getPages(db *sql.DB) []*Page {
@@ -72,14 +68,19 @@ func pullPages(db *sql.DB) {
 
 func pushPage(db *sql.DB, pageUrl string) {
 	page := loadPage(db, pageUrl)
+	mdBody := string(blackfriday.MarkdownCommon([]byte(page.Body)))
+	// Using a map here because Canvas doesn't like it when we PUT with fields
+	// such as CreatedAt and I can't figure out how to remove them only for
+	// marshaling.
 	wikiPage := map[string]interface{}{
 		"wiki_page": map[string]interface{}{
 			"title":            page.Title,
-			"body":             page.Body,
-			"editing_roles":    "teachers", // TODO: make configurable
-			"notify_of_update": false,      // TODO: make configurable (cobra flag)
+			"body":             mdBody,
+			"editing_roles":    page.EditingRoles,
+			"notify_of_update": false, // TODO: make configurable (cobra flag)
 			"published":        page.Published,
 			"front_page":       page.FrontPage,
+			"todo_date":        page.TodoDate, // TODO: canvas not accepting this for some reason
 		},
 	}
 	courses, _ := findCourses(db)
