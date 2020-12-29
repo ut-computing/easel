@@ -114,6 +114,7 @@ easel push pages
 Reads each page in the component type's directory and pushes them to each
 configured course in Canvas. Currently works for the following components:
 
+- assignments (only create, doesn't update yet)
 - courses
 - pages
 - more to come!
@@ -214,6 +215,7 @@ locally. Hopefully we'll have a solution for this in the future.
 - represent dates as time.Time
     - API requires strings in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ (e.g., "2013-01-23T23:59:00-07:00")
 - add a progress bar for pushing and pulling
+- add a cobra command to publish components rather than editing the file?
 
 ### Thoughts
 

@@ -2,9 +2,13 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/url"
 
+	"github.com/russross/blackfriday"
 	"gopkg.in/yaml.v2"
 )
 
@@ -159,6 +163,30 @@ func pullAssignments(db *sql.DB) {
 	}
 }
 
+func pushAssignment(db *sql.DB, filepath string) error {
+	assignment := new(Assignment)
+	_, err := readFile(filepath, assignment)
+	if err != nil {
+		return err
+	}
+	return assignment.Push(db)
+}
+
+func pushAssignments(db *sql.DB) {
+	files, err := ioutil.ReadDir(assignmentsDir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, f := range files {
+		filepath := f.Name()
+		err = pushAssignment(db, filepath)
+		if err != nil {
+			log.Fatalf("Failed to push assignment %s: %v\n", filepath, err)
+		}
+	}
+}
+
 func (assignment *Assignment) Dump() error {
 	metadata, err := yaml.Marshal(assignment)
 	if err != nil {
@@ -170,6 +198,47 @@ func (assignment *Assignment) Dump() error {
 
 func (assignment *Assignment) Pull(db *sql.DB) error {
 	return pullComponent(db, assignmentPath, assignment.CanvasId, assignment)
+}
+
+// For now, pushing only creates assignments. Later, we'll have to track whether
+// an assignment already exists before pushing it to either create or update it.
+// The difference is that assignments have separate API endpoints for the two
+// actions whereas pages do not.
+func (assignment *Assignment) Push(db *sql.DB) error {
+	// Convert struct to map
+	marshalled, err := json.Marshal(assignment)
+	if err != nil {
+		return err
+	}
+	var assignmentMap map[string]interface{}
+	err = json.Unmarshal(marshalled, &assignmentMap)
+	if err != nil {
+		return err
+	}
+
+	// fix a few fields
+	assignmentMap["description"] = string(blackfriday.MarkdownCommon([]byte(assignment.Description)))
+	invalidFields := []string{"updated_at", "created_at", "id", "html_url",
+		"submissions_download_url", "course_id", "anonymous_submissions",
+		"discussion_topic", "intra_group_peer_reviews", "needs_grading_count",
+		"peer_review_count", "peer_reviews_assign_at", "quiz_id", "rubric",
+		"rubric_settings", "use_rubric_for_grading"}
+	for _, field := range invalidFields {
+		delete(assignmentMap, field)
+	}
+
+	a := map[string]interface{}{
+		"assignment": assignmentMap,
+	}
+
+	courses, _ := findCourses(db)
+	for _, course := range courses {
+		courseId := course.CanvasId
+		createAssignmentPath := fmt.Sprintf(assignmentsPath, courseId)
+		fmt.Printf("Pushing %s to %s\n", assignment.Name, course.Name)
+		mustPostObject(createAssignmentPath, url.Values{}, a, nil)
+	}
+	return nil
 }
 
 func (assignment *Assignment) Slug() string {

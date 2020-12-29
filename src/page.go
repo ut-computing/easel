@@ -85,7 +85,7 @@ func pushPage(db *sql.DB, pageUrl string) {
 	}
 	courses, _ := findCourses(db)
 	for _, course := range courses {
-		courseId := courses[0].CanvasId
+		courseId := course.CanvasId
 		pageFullPath := fmt.Sprintf(pagePath, courseId, pageUrl)
 		fmt.Printf("Pushing page %s to %s\n", pageUrl, course.Name)
 		mustPutObject(pageFullPath, url.Values{}, wikiPage, nil)

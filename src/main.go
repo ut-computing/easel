@@ -308,9 +308,11 @@ func CommandPush(cmd *cobra.Command, args []string) {
 		// push all components of single type
 		componentType := args[0]
 		switch componentType {
-		case "courses":
+		case "assignments", "a":
+			pushAssignments(db)
+		case "courses", "c":
 			pushCourses(db)
-		case "pages":
+		case "pages", "p":
 			pushPages(db)
 		default:
 			log.Fatalf("Invalid component type: %s", componentType)
@@ -320,6 +322,11 @@ func CommandPush(cmd *cobra.Command, args []string) {
 		componentType := args[0]
 		componentFilepath := args[1]
 		switch componentType {
+		case "assignments", "assignment", "a":
+			err := pushAssignment(db, componentFilepath)
+			if err != nil {
+				log.Fatalf("Failed to push assignment %s: %v\n", componentFilepath, err)
+			}
 		case "courses", "course", "c":
 			courses, err := matchCourse(db, componentFilepath)
 			if err != nil {
@@ -332,7 +339,7 @@ func CommandPush(cmd *cobra.Command, args []string) {
 				log.Fatalf("Failed to find a single match for %s. Narrow search query or select course id from list.")
 			}
 			courses[0].Push()
-		case "pages", "page":
+		case "pages", "page", "p":
 			pageUrl := getPageUrlFromFilepath(componentFilepath)
 			// TODO: flag for notifying participants of update? set field notify_of_update
 			pushPage(db, pageUrl)
