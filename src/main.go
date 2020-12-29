@@ -21,6 +21,7 @@ const (
 	assignmentGroupPath  = assignmentGroupsPath + "/%d"
 	coursesPath          = "/courses"
 	coursePath           = coursesPath + "/%d"
+	externalToolsPath    = coursePath + "/external_tools"
 	modulesPath          = coursePath + "/modules"
 	modulePath           = modulesPath + "/%d"
 	pagesPath            = coursePath + "/pages"
@@ -312,6 +313,8 @@ func CommandPush(cmd *cobra.Command, args []string) {
 			pushAssignments(db)
 		case "courses", "c":
 			pushCourses(db)
+		case "external_tools", "et":
+			pushExternalTools(db)
 		case "pages", "p":
 			pushPages(db)
 		default:
@@ -339,6 +342,8 @@ func CommandPush(cmd *cobra.Command, args []string) {
 				log.Fatalf("Failed to find a single match for %s. Narrow search query or select course id from list.")
 			}
 			courses[0].Push()
+		case "external_tools", "external_tool", "et":
+			pushExternalTool(db, componentFilepath)
 		case "pages", "page", "p":
 			pageUrl := getPageUrlFromFilepath(componentFilepath)
 			// TODO: flag for notifying participants of update? set field notify_of_update

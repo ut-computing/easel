@@ -116,6 +116,7 @@ configured course in Canvas. Currently works for the following components:
 
 - assignments (only create, doesn't update yet)
 - courses
+- external tools
 - pages
 - more to come!
 
