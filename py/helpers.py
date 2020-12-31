@@ -1,19 +1,19 @@
-import json
 import os
+import logging
+import json
 from pathlib import Path
-import requests
 import sqlite3
-import sys
+
+import requests
 import tinydb
 
 API="/api/v1"
-SCHEMA="https://"
+HTTPS="https://"
 
 def write_config(hostname, token):
     home = Path.home()
     if home == "":
-        print("home directory is not set")
-        sys.exit(1)
+        raise ValueError("home directory is not set")
 
     config_file = home / ".easelrc" # https://docs.python.org/3.7/library/pathlib.html#operators
 
@@ -22,7 +22,7 @@ def write_config(hostname, token):
         with open(config_file, 'x') as f:
             f.write(json.dumps(config)) # TODO: 0644
     except FileExistsError:
-        print(f"Config file {config_file} exists")
+        logging.error(f"Config file {config_file} exists")
 
 def load_db():
     return tinydb.TinyDB(".easeldb")
@@ -34,29 +34,46 @@ def setup_directories():
         os.mkdir(d)
 
 def get(path, params={}, decode=True):
-    conf = Config()
+    return do_request(path, params, "GET")
+
+def post(path, upload, params={}):
+    return do_request(path, params, "POST", upload)
+
+def put(path, upload, params={}):
+    return do_request(path, params, "PUT", upload)
+
+def do_request(path, params, method, upload=None):
     if not path.startswith("/"):
-        print("request path must start with /")
-        sys.exit(1)
-    r = requests.get(SCHEMA+conf.hostname+path,
-            headers={'Authorization': 'Bearer '+conf.token},
-            params=params)
-    if r.status_code in [200]:
-        if decode:
-            r = r.json()
-    else:
-        print("=== REQUEST ERROR: {} ===".format(r.status_code))
-        print(r.json())
-        print("==========================")
-    return r
+        raise ValueError('request path must start with /')
+    if method not in ('GET', 'POST', 'PUT', 'DELETE'):
+        raise ValueError('do_request only recognizes GET, POST, PUT, and DELETE methods')
+
+    conf = Config()
+    headers={'Authorization': 'Bearer '+conf.token}
+    req_url = "https://"+conf.hostname+path
+    data = None
+    if upload is not None and method in ('POST', 'PUT'):
+        data = dict(upload)
+
+    logging.info(f"{method} {req_url}")
+    logging.debug(f"Params: {params}")
+    logging.debug(f"Headers: {headers}")
+    logging.debug(f"Data: {data}")
+
+    resp = requests.request(method, req_url, params=params, data=data,
+            headers=headers)
+
+    logging.debug(json.dumps(resp.json(), sort_keys=True, indent=4))
+    if resp.status_code != 200:
+        raise requests.HTTPError("Received unexpected status: {}".format(resp.status_code))
+    return resp.json()
 
 class Config:
 
     def __init__(self):
         home = Path.home()
         if home == "":
-            print("home directory is not set")
-            sys.exit(1)
+            raise ValueError("home directory is not set")
 
         config_file = home / ".easelrc" # https://docs.python.org/3.7/library/pathlib.html#operators
 
@@ -65,3 +82,6 @@ class Config:
         f.close()
         self.hostname = c["host"]
         self.token = c["token"]
+
+    def __repr__(self):
+        return f"Config(hostname={self.hostname},  token={self.token})"

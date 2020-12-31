@@ -2,6 +2,7 @@ import sys
 
 import course
 import helpers
+import helpers_yaml
 
 def cmd_login(db, args):
     hostname = args.hostname
@@ -53,12 +54,33 @@ def cmd_course_remove(db, course_search):
     courses = course.match_course(db, course_search)
     if len(courses) == 0:
         print("could not find course for", course_search)
+        sys.exit(1)
     elif len(courses) > 1:
         for course_ in courses:
             print(course_)
         print("the search found more than one course")
         print("   pick the correct course id from the list")
         print("   and run 'easel course remove <id>'")
+        sys.exit(1)
 
     courses[0].remove(db)
     print("removed course", courses[0].name)
+
+def cmd_pull(db, args):
+    print("pulling", args.component_type, args.component_filepath)
+    if not args.component_filepath:
+        # pull all
+        pass
+    else:
+        # pull single
+        pass
+
+def cmd_push(db, args):
+    print("pushing", args.component_type, args.component_filepath)
+    if not args.component_filepath:
+        # push all
+        pass
+    else:
+        # push single
+        component = helpers_yaml.read(args.component_filepath)
+        component.push(db, args.course)

@@ -1,4 +1,5 @@
 import argparse
+import logging
 
 import commands
 import helpers
@@ -7,8 +8,10 @@ parser = argparse.ArgumentParser(prog="easel", description="Easel - A Canvas "
         "course management tool.")
 parser.add_argument('--api', action='store_true', help="report all API "
         "requests")
-parser.add_argument('--api-dump', action='store_true', help="dump API request "
+parser.add_argument('--api_dump', action='store_true', help="dump API request "
         "and response data")
+parser.add_argument('--course', '-c', action='append', help="the canvas "
+        "course(s) on which to perform the action")
 
 # commands
 subparsers = parser.add_subparsers(dest="command", help="the easel action to "
@@ -33,7 +36,32 @@ parser_course.add_argument("subcommand", choices=["list", "add", "remove"])
 parser_course.add_argument("subcommand_argument", nargs="?")
 parser_course.set_defaults(func=commands.cmd_course)
 
+## pull
+parser_pull = subparsers.add_parser("pull", help="pull components")
+parser_pull.add_argument("component_type", choices=["assignments",
+    "assignment", "a", "assignment_groups", "assignment_group", "ag",
+    "courses", "course", "c", "modules", "module", "m", "pages", "page", "p",
+    "quizzes", "quiz", "q"])
+parser_pull.add_argument("component_filepath", nargs="?", help="the specific"
+        " component to pull (if pulling a single component)")
+parser_pull.set_defaults(func=commands.cmd_pull)
+
+## push
+parser_push = subparsers.add_parser("push", help="push components")
+parser_push.add_argument("component_type", choices=["assignments",
+    "assignment", "a", "assignment_groups", "assignment_group", "ag",
+    "courses", "course", "c", "external_tools", "external_tool", "et",
+    "modules", "module", "m", "pages", "page", "p", "quizzes", "quiz", "q"])
+parser_push.add_argument("component_filepath", nargs="?", help="the specific"
+        " component to push (if pushing a single component)")
+parser_push.set_defaults(func=commands.cmd_push)
+
 args = parser.parse_args()
+
+if args.api:
+    logging.basicConfig(level=logging.INFO)
+elif args.api_dump:
+    logging.basicConfig(level=logging.DEBUG)
 
 db = helpers.load_db()
 args.func(db, args)

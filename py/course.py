@@ -20,8 +20,8 @@ class Course:
         self.syllabus = syllabus
 
     def __repr__(self):
-        return (f"<Course(canvas_id={self.canvas_id}, name={self.name}, "
-                "code={self.code}")
+        return (f"Course(canvas_id={self.canvas_id}, name={self.name}, "
+                "code={self.code})")
 
     def __str__(self):
         return f"{self.canvas_id}\t{self.name}\t{self.code}\t{self.workflow_state}"
