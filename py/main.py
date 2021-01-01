@@ -38,22 +38,14 @@ parser_course.set_defaults(func=commands.cmd_course)
 
 ## pull
 parser_pull = subparsers.add_parser("pull", help="pull components")
-parser_pull.add_argument("component_type", choices=["assignments",
-    "assignment", "a", "assignment_groups", "assignment_group", "ag",
-    "courses", "course", "c", "modules", "module", "m", "pages", "page", "p",
-    "quizzes", "quiz", "q"])
-parser_pull.add_argument("component_filepath", nargs="?", help="the specific"
-        " component to pull (if pulling a single component)")
+parser_pull.add_argument("component_filepath", help="the specific component "
+        "to pull (if pulling a single component)")
 parser_pull.set_defaults(func=commands.cmd_pull)
 
 ## push
 parser_push = subparsers.add_parser("push", help="push components")
-parser_push.add_argument("component_type", choices=["assignments",
-    "assignment", "a", "assignment_groups", "assignment_group", "ag",
-    "courses", "course", "c", "external_tools", "external_tool", "et",
-    "modules", "module", "m", "pages", "page", "p", "quizzes", "quiz", "q"])
-parser_push.add_argument("component_filepath", nargs="?", help="the specific"
-        " component to push (if pushing a single component)")
+parser_push.add_argument("component_filepath", help="the specific "
+        "component(s) to push (if pushing a single component)")
 parser_push.set_defaults(func=commands.cmd_push)
 
 args = parser.parse_args()

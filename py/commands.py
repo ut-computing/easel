@@ -67,7 +67,6 @@ def cmd_course_remove(db, course_search):
     print("removed course", courses[0].name)
 
 def cmd_pull(db, args):
-    print("pulling", args.component_type, args.component_filepath)
     if not args.component_filepath:
         # pull all
         pass
@@ -76,7 +75,6 @@ def cmd_pull(db, args):
         pass
 
 def cmd_push(db, args):
-    print("pushing", args.component_type, args.component_filepath)
     if not args.component_filepath:
         # push all
         pass
