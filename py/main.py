@@ -8,7 +8,7 @@ parser = argparse.ArgumentParser(prog="easel", description="Easel - A Canvas "
         "course management tool.")
 parser.add_argument('--api', action='store_true', help="report all API "
         "requests")
-parser.add_argument('--api_dump', action='store_true', help="dump API request "
+parser.add_argument('--api-dump', action='store_true', help="dump API request "
         "and response data")
 parser.add_argument('--course', '-c', action='append', help="the canvas "
         "course(s) on which to perform the action")

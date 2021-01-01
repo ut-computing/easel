@@ -58,13 +58,15 @@ def do_request(path, params, method, upload=None):
     logging.info(f"{method} {req_url}")
     logging.debug(f"Params: {params}")
     logging.debug(f"Headers: {headers}")
-    logging.debug(f"Data: {data}")
+    logging.debug("Data: {}".format(json.dumps(data, sort_keys=True, indent=4)))
 
-    resp = requests.request(method, req_url, params=params, data=data,
+    # apparently requests can't handle nested dictionaries in the data
+    # parameter so I'm using the json param for it instead
+    resp = requests.request(method, req_url, params=params, json=data,
             headers=headers)
 
     logging.debug(json.dumps(resp.json(), sort_keys=True, indent=4))
-    if resp.status_code != 200:
+    if resp.status_code not in [200, 201]:
         raise requests.HTTPError("Received unexpected status: {}".format(resp.status_code))
     return resp.json()
 

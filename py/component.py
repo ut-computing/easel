@@ -13,6 +13,10 @@ class Component:
         fields = vars(self)
         fields.pop("path", None)
         fields.pop("path_args", None)
+        keys = list(fields.keys())
+        for key in keys:
+            if fields[key] is None:
+                del fields[key]
         yield from fields.items()
 
     def push(self, db, courses):
