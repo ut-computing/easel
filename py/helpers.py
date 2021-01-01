@@ -12,7 +12,7 @@ API="/api/v1"
 HTTPS="https://"
 
 def md2html(mdtext):
-    extensions = ['fenced_code', 'codehilite']
+    extensions = ['fenced_code', 'codehilite', 'tables']
     return markdown.markdown(mdtext, extensions=extensions)
 
 def write_config(hostname, token):
