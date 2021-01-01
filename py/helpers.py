@@ -4,11 +4,16 @@ import json
 from pathlib import Path
 import sqlite3
 
+import markdown
 import requests
 import tinydb
 
 API="/api/v1"
 HTTPS="https://"
+
+def md2html(mdtext):
+    extensions = ['fenced_code', 'codehilite']
+    return markdown.markdown(mdtext, extensions=extensions)
 
 def write_config(hostname, token):
     home = Path.home()
